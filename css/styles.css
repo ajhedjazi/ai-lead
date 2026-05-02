@@ -123,6 +123,41 @@ body {
   background: #fafafa;
 }
 
+.message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.message-row.assistant {
+  justify-content: flex-start;
+}
+
+.message-row.user {
+  justify-content: flex-end;
+}
+
+.assistant-avatar {
+  width: 34px;
+  height: 34px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #0056b3;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  flex: 0 0 34px;
+  object-fit: cover;
+}
+
+.assistant-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .message {
   max-width: 80%;
   padding: 10px 14px;
@@ -390,6 +425,12 @@ body {
     max-width: 90%;
     font-size: 14px;
     padding: 10px 12px;
+  }
+
+  .assistant-avatar {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
   }
 
   .chat-options-group {

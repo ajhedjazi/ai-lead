@@ -14,6 +14,22 @@
   let currentQuestionIndex = 0;
   let enquiry = {};
   let googlePlacesAutocomplete = null;
+  let currentAssistantIndex = 0;
+  let currentAssistant = null;
+  const assistantProfiles = [
+    {
+      name: 'Mark',
+      image: 'assets/images/mark.jpg',
+      fallbackImage: 'images/mark.jpg',
+      fallbackInitial: 'M',
+    },
+    {
+      name: 'Leroy',
+      image: 'assets/images/leroy.jpg',
+      fallbackImage: 'images/leroy.jpg',
+      fallbackInitial: 'L',
+    },
+  ];
   const propertyImageFallback = `data:image/svg+xml,${encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 120">
       <rect width="140" height="120" fill="#edf6ff"/>
@@ -27,7 +43,7 @@
   const questions = [
     {
       key: 'type',
-      text: "Hi there! I'm your property assistant. What are you looking to do today?",
+      text: () => `Hi there! I'm ${currentAssistant.name}. What are you looking to do today?`,
       type: 'options',
       options: [
         { label: 'Buy a property', value: 'buyer' },
@@ -166,6 +182,7 @@
     widgetTrigger.setAttribute('aria-expanded', String(isOpening));
 
     if (isOpening) {
+      chooseAssistant();
       resetChat();
       askQuestion();
     }
@@ -177,6 +194,27 @@
     widgetTrigger.hidden = false;
     widgetTrigger.setAttribute('aria-expanded', 'false');
     resetChat();
+  }
+
+  function chooseAssistant() {
+    let previousIndex = currentAssistantIndex - 1;
+
+    try {
+      previousIndex = Number(localStorage.getItem('lastAssistantIndex') || '-1');
+    } catch (error) {
+      previousIndex = currentAssistantIndex - 1;
+    }
+
+    currentAssistantIndex = Number.isInteger(previousIndex)
+      ? (previousIndex + 1) % assistantProfiles.length
+      : 0;
+    currentAssistant = assistantProfiles[currentAssistantIndex];
+
+    try {
+      localStorage.setItem('lastAssistantIndex', String(currentAssistantIndex));
+    } catch (error) {
+      // The current in-memory assistant still keeps the chat working.
+    }
   }
 
   // === Chat Rendering Logic ===
@@ -216,8 +254,46 @@
       chatInputArea.classList.toggle('money-input', currentQuestion?.key === 'budget');
     }
 
-    chatMessages.appendChild(messageDiv);
+    chatMessages.appendChild(createMessageRow(messageDiv, sender));
     scrollBottom();
+  }
+
+  function createMessageRow(messageDiv, sender) {
+    const messageRow = document.createElement('div');
+    messageRow.classList.add('message-row', sender);
+
+    if (sender === 'assistant') {
+      messageRow.appendChild(createAssistantAvatar());
+    }
+
+    messageRow.appendChild(messageDiv);
+
+    return messageRow;
+  }
+
+  function createAssistantAvatar() {
+    const avatar = document.createElement('img');
+    avatar.classList.add('assistant-avatar');
+    avatar.src = currentAssistant.image;
+    avatar.alt = currentAssistant.name;
+    avatar.loading = 'lazy';
+    avatar.dataset.fallbackTried = 'false';
+
+    avatar.addEventListener('error', () => {
+      if (avatar.dataset.fallbackTried === 'false' && currentAssistant.fallbackImage) {
+        avatar.dataset.fallbackTried = 'true';
+        avatar.src = currentAssistant.fallbackImage;
+        return;
+      }
+
+      const fallback = document.createElement('span');
+      fallback.classList.add('assistant-avatar', 'assistant-avatar-fallback');
+      fallback.textContent = currentAssistant.fallbackInitial;
+      fallback.setAttribute('aria-label', currentAssistant.name);
+      avatar.replaceWith(fallback);
+    });
+
+    return avatar;
   }
 
   function showTypingIndicator() {
@@ -225,7 +301,7 @@
     typingDiv.classList.add('message', 'assistant', 'typing-indicator');
     typingDiv.innerHTML = '<span></span><span></span><span></span>';
     typingDiv.id = 'typing-indicator';
-    chatMessages.appendChild(typingDiv);
+    chatMessages.appendChild(createMessageRow(typingDiv, 'assistant'));
     scrollBottom();
   }
 
@@ -233,7 +309,7 @@
     const typingDiv = document.getElementById('typing-indicator');
 
     if (typingDiv) {
-      typingDiv.remove();
+      typingDiv.closest('.message-row')?.remove();
     }
   }
 
