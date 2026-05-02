@@ -101,12 +101,20 @@
       placeholder: "Start typing (e.g., Hull, HU1)",
     },
     {
-      key: 'name',
-      text: "Alright, we're almost ready to find your matches! What's your full name?",
+      key: 'firstName',
+      text: "Alright, we're almost ready to find your matches! What's your first name?",
       type: 'input',
-      placeholder: "e.g., John Smith",
-      validate: (v) => v.trim().length > 2,
-      error: "Please enter your full name.",
+      placeholder: "e.g., John",
+      validate: (v) => v.trim().length > 1,
+      error: "Please enter your first name.",
+    },
+    {
+      key: 'lastName',
+      text: "Thanks. And what's your last name?",
+      type: 'input',
+      placeholder: "e.g., Smith",
+      validate: (v) => v.trim().length > 1,
+      error: "Please enter your last name.",
     },
     {
       key: 'email',
@@ -118,10 +126,14 @@
     },
     {
       key: 'phone',
-      text: "Do you have a phone number? (Optional)",
+      text: "And your phone number, please?",
       type: 'input',
       placeholder: "e.g., 07123 456789",
-      validate: () => true,
+      validate: (v) => {
+        const digits = String(v).replace(/\D/g, '');
+        return digits.length >= 10 && digits.length <= 15;
+      },
+      error: "Please enter a valid phone number.",
     }
   ];
 
@@ -356,7 +368,7 @@
         chatInput.focus();
       }
 
-      sendButton.disabled = q.key !== 'phone' && chatInput.value.trim() === '' && !chatInput.disabled;
+      sendButton.disabled = chatInput.value.trim() === '' && !chatInput.disabled;
     }, 700);
   }
 
@@ -459,7 +471,7 @@
         selectedPlaceLocation = null;
       }
 
-      sendButton.disabled = q?.key !== 'phone' && chatInput.value.trim() === '';
+      sendButton.disabled = chatInput.value.trim() === '';
     });
 
     chatInput.addEventListener('keypress', (e) => {
@@ -474,7 +486,7 @@
 
       if (chatInput.disabled) return;
 
-      if (!userInputValue && q.key !== 'phone') {
+      if (!userInputValue) {
         addMessage("Please type an answer or select an option.", 'assistant');
         return;
       }
@@ -619,7 +631,7 @@
   }
 
   function showResults() {
-    const firstName = enquiry.name.split(' ')[0];
+    const firstName = enquiry.firstName;
 
     if (enquiry.type === 'seller') {
       addMessage(`Thank you for providing your details, ${firstName}! We'll get in touch shortly to discuss selling your property.`, 'assistant');
