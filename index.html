@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Property Match Assistant</title>
+
+  <!-- Font Awesome for icons -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="page-content">
+    <h1>Welcome to Property Match Assistant</h1>
+    <p>Chat with our smart assistant to find the perfect property for you.</p>
+  </div>
+
+  <!-- Widget Trigger Button -->
+  <button id="widget-trigger" class="widget-trigger">
+    <i class="fa-solid fa-comments"></i> Start Chat
+  </button>
+
+  <!-- Widget Container -->
+  <div id="widget-container" class="widget-container hidden">
+    <div class="widget-header">
+      <h2><i class="fa-solid fa-house-chimney"></i> Property Assistant</h2>
+      <button id="widget-close" class="widget-close">&times;</button>
+    </div>
+
+    <!-- Chat Window -->
+    <div class="chat-messages" id="chat-messages"></div>
+
+    <!-- Input -->
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Type your answer..." autocomplete="off" />
+      <button id="send-button" disabled><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+  </div>
+
+  <script src="js/widget.js"></script>
+
+  <!-- Google Places API -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBHo898UoKShTl7e4CwP8CmXQCW05FCxi0&libraries=places&callback=initMapAutocomplete"
+    async
+    defer
+  ></script>
+</body>
+</html>
