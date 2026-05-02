@@ -158,20 +158,24 @@
 
   // === Widget Control Functions ===
   function toggleWidget() {
-    widgetContainer.classList.toggle('hidden');
+    const isOpening = widgetContainer.classList.contains('hidden');
 
-    if (!widgetContainer.classList.contains('hidden')) {
-      widgetTrigger.classList.add('hidden');
+    widgetContainer.classList.toggle('hidden', !isOpening);
+    widgetTrigger.classList.toggle('hidden', isOpening);
+    widgetTrigger.hidden = isOpening;
+    widgetTrigger.setAttribute('aria-expanded', String(isOpening));
+
+    if (isOpening) {
       resetChat();
       askQuestion();
-    } else {
-      widgetTrigger.classList.remove('hidden');
     }
   }
 
   function closeWidget() {
     widgetContainer.classList.add('hidden');
     widgetTrigger.classList.remove('hidden');
+    widgetTrigger.hidden = false;
+    widgetTrigger.setAttribute('aria-expanded', 'false');
     resetChat();
   }
 
