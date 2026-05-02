@@ -15,8 +15,12 @@
   let currentQuestionIndex = 0;
   let enquiry = {};
   let googlePlacesAutocomplete = null;
+  let selectedPlaceLocation = null;
   let currentAssistantIndex = 0;
   let currentAssistant = null;
+  const maxMatchDistanceMiles = 25;
+  const minBudgetAmount = 25000;
+  const maxBudgetAmount = 5000000;
   const assistantProfiles = [
     {
       name: 'Mark',
@@ -129,6 +133,8 @@
       price: 185000,
       type: 'buyer',
       location: 'Hull',
+      lat: 53.7676,
+      lng: -0.3274,
       image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=280&q=80',
     },
     {
@@ -137,6 +143,8 @@
       price: 135000,
       type: 'investor',
       location: 'Hull City Centre',
+      lat: 53.7443,
+      lng: -0.3325,
       image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=280&q=80',
     },
     {
@@ -145,6 +153,8 @@
       price: 220000,
       type: 'investor',
       location: 'East Hull',
+      lat: 53.7598,
+      lng: -0.2867,
       image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=280&q=80',
     },
     {
@@ -153,6 +163,8 @@
       price: 110000,
       type: 'buyer',
       location: 'Bilton',
+      lat: 53.7803,
+      lng: -0.2424,
       image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=280&q=80',
     },
     {
@@ -161,6 +173,8 @@
       price: 300000,
       type: 'buyer',
       location: 'Beverley',
+      lat: 53.8425,
+      lng: -0.4350,
       image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=280&q=80',
     },
     {
@@ -169,6 +183,8 @@
       price: 90000,
       type: 'investor',
       location: 'Hull City Centre',
+      lat: 53.7443,
+      lng: -0.3325,
       image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=280&q=80',
     }
   ];
@@ -347,7 +363,15 @@
   function handleAnswer(value, label = null, clickEvent = null) {
     const q = questions[currentQuestionIndex];
 
-    enquiry[q.key] = q.transform ? q.transform(value) : value;
+    enquiry[q.key] = q.key === 'budget'
+      ? parseMoney(value)
+      : q.transform ? q.transform(value) : value;
+
+    if (q.key === 'location' && selectedPlaceLocation) {
+      enquiry.locationLat = selectedPlaceLocation.lat;
+      enquiry.locationLng = selectedPlaceLocation.lng;
+    }
+
     addMessage(label || value, 'user');
 
     const optionsGroup = clickEvent?.target?.closest('.chat-options-group');
@@ -363,6 +387,7 @@
       googlePlacesAutocomplete = null;
     }
 
+    selectedPlaceLocation = null;
     document.body.classList.remove('location-autocomplete-active');
 
     currentQuestionIndex++;
@@ -387,7 +412,8 @@
         types: ['geocode'],
         componentRestrictions: { country: 'uk' },
         bounds: hullBounds,
-        strictBounds: false
+        strictBounds: false,
+        fields: ['formatted_address', 'geometry'],
       });
 
       googlePlacesAutocomplete.addListener('place_changed', () => {
@@ -396,6 +422,13 @@
         if (place?.formatted_address) {
           chatInput.value = place.formatted_address;
           sendButton.disabled = false;
+        }
+
+        if (place?.geometry?.location) {
+          selectedPlaceLocation = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          };
         }
 
         chatInput.blur();
@@ -421,6 +454,11 @@
 
     chatInput.addEventListener('input', () => {
       const q = questions[currentQuestionIndex];
+
+      if (q?.key === 'location') {
+        selectedPlaceLocation = null;
+      }
+
       sendButton.disabled = q?.key !== 'phone' && chatInput.value.trim() === '';
     });
 
@@ -441,6 +479,20 @@
         return;
       }
 
+      if (q.key === 'budget' && !isRealisticMoneyAmount(userInputValue)) {
+        addMessage(userInputValue, 'user');
+        addMessage("Please enter a realistic amount between £25,000 and £5,000,000.", 'assistant');
+        chatInput.value = '';
+        sendButton.disabled = true;
+        chatInput.focus();
+        return;
+      }
+
+      if (q.key === 'budget') {
+        handleAnswer(userInputValue);
+        return;
+      }
+
       if (q.validate && !q.validate(userInputValue)) {
         addMessage(userInputValue, 'user');
         addMessage(q.error, 'assistant');
@@ -454,11 +506,19 @@
     });
   }
 
+  function parseMoney(value) {
+    return parseFloat(String(value).replace(/[^0-9.]/g, ''));
+  }
+
+  function isRealisticMoneyAmount(value) {
+    const amount = parseMoney(value);
+    return !isNaN(amount) && amount >= minBudgetAmount && amount <= maxBudgetAmount;
+  }
+
   // === Property Scoring & Results ===
   function scoreProperty(property) {
     let score = 0;
     const budget = enquiry.budget;
-    const userLocation = enquiry.location ? enquiry.location.toLowerCase() : '';
 
     if (enquiry.type === 'seller') return 0;
 
@@ -478,13 +538,84 @@
       }
     }
 
-    if (userLocation && property.location.toLowerCase().includes(userLocation)) {
-      score += 20;
-    } else if (userLocation && property.location.toLowerCase().includes(userLocation.split(',')[0].trim())) {
-      score += 10;
+    if (hasSelectedLocation() && property.lat && property.lng && enquiry.locationLat && enquiry.locationLng) {
+      const milesAway = getDistanceMiles(
+        enquiry.locationLat,
+        enquiry.locationLng,
+        property.lat,
+        property.lng
+      );
+
+      if (milesAway <= 5) {
+        score += 20;
+      } else if (milesAway <= 15) {
+        score += 15;
+      } else if (milesAway <= maxMatchDistanceMiles) {
+        score += 10;
+      }
+    } else if (locationTextMatches(property)) {
+      score += 15;
     }
 
     return Math.min(100, Math.max(0, score));
+  }
+
+  function hasSelectedLocation() {
+    return Boolean(enquiry.location && String(enquiry.location).trim());
+  }
+
+  function propertyMatchesPreferredLocation(property) {
+    if (!hasSelectedLocation()) return true;
+
+    if (enquiry.locationLat && enquiry.locationLng && property.lat && property.lng) {
+      return getDistanceMiles(
+        enquiry.locationLat,
+        enquiry.locationLng,
+        property.lat,
+        property.lng
+      ) <= maxMatchDistanceMiles;
+    }
+
+    return locationTextMatches(property);
+  }
+
+  function locationTextMatches(property) {
+    const preferredLocation = normalizeLocation(enquiry.location);
+    const preferredArea = normalizeLocation(String(enquiry.location || '').split(',')[0]);
+    const propertyLocation = normalizeLocation(property.location);
+
+    if (!preferredLocation || !propertyLocation) return false;
+
+    return propertyLocation.includes(preferredLocation)
+      || propertyLocation.includes(preferredArea)
+      || preferredArea.includes(propertyLocation);
+  }
+
+  function normalizeLocation(value) {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function getDistanceMiles(startLat, startLng, endLat, endLng) {
+    const earthRadiusMiles = 3958.8;
+    const latDistance = toRadians(endLat - startLat);
+    const lngDistance = toRadians(endLng - startLng);
+    const startLatRadians = toRadians(startLat);
+    const endLatRadians = toRadians(endLat);
+
+    const haversine = Math.sin(latDistance / 2) ** 2
+      + Math.cos(startLatRadians)
+      * Math.cos(endLatRadians)
+      * Math.sin(lngDistance / 2) ** 2;
+
+    return 2 * earthRadiusMiles * Math.asin(Math.sqrt(haversine));
+  }
+
+  function toRadians(degrees) {
+    return degrees * (Math.PI / 180);
   }
 
   function showResults() {
@@ -502,6 +633,7 @@
     const relevantProperties = properties.filter((p) => {
       if (p.type !== enquiry.type) return false;
       if (enquiry.budget && p.price > enquiry.budget) return false;
+      if (!propertyMatchesPreferredLocation(p)) return false;
 
       return true;
     });
@@ -621,6 +753,8 @@
       google.maps.event.clearInstanceListeners(chatInput);
       googlePlacesAutocomplete = null;
     }
+
+    selectedPlaceLocation = null;
   }
 
   // Initial setup when DOM is ready
