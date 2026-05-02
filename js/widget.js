@@ -16,6 +16,8 @@
   let enquiry = {};
   let googlePlacesAutocomplete = null;
   let selectedPlaceLocation = null;
+  let isQuestionPending = false;
+  let questionRenderId = 0;
   let currentAssistantIndex = 0;
   let currentAssistant = null;
   const maxMatchDistanceMiles = 25;
@@ -348,8 +350,14 @@
 
   // === Conversation Flow Control ===
   function askQuestion() {
+    const renderId = ++questionRenderId;
+    isQuestionPending = true;
+    chatInput.disabled = true;
+    sendButton.disabled = true;
+
     if (currentQuestionIndex >= questions.length) {
       removeTypingIndicator();
+      isQuestionPending = false;
       return showResults();
     }
 
@@ -357,10 +365,13 @@
     showTypingIndicator();
 
     setTimeout(() => {
+      if (renderId !== questionRenderId) return;
+
       removeTypingIndicator();
       const questionText = typeof q.text === 'function' ? q.text() : q.text;
       addMessage(questionText, 'assistant', q.options);
       chatInput.value = '';
+      isQuestionPending = false;
 
       if (q.key === 'location' && window.google?.maps?.places) {
         enableAutocomplete();
@@ -373,6 +384,8 @@
   }
 
   function handleAnswer(value, label = null, clickEvent = null) {
+    if (isQuestionPending) return;
+
     const q = questions[currentQuestionIndex];
 
     enquiry[q.key] = q.key === 'budget'
@@ -475,7 +488,7 @@
     });
 
     chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !sendButton.disabled) {
+      if (e.key === 'Enter' && !isQuestionPending && !sendButton.disabled) {
         sendButton.click();
       }
     });
@@ -484,6 +497,7 @@
       const userInputValue = chatInput.value.trim();
       const q = questions[currentQuestionIndex];
 
+      if (isQuestionPending) return;
       if (chatInput.disabled) return;
 
       if (!userInputValue) {
@@ -751,6 +765,8 @@
 
   // === Reset Function ===
   function resetChat() {
+    questionRenderId++;
+    isQuestionPending = false;
     currentQuestionIndex = 0;
     enquiry = {};
     chatMessages.innerHTML = '';
