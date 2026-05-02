@@ -16,6 +16,44 @@ body {
   text-align: center;
 }
 
+.page-results {
+  max-width: 980px;
+  margin: 20px auto 80px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 22px;
+}
+
+.page-results.hidden {
+  display: none;
+}
+
+.page-results h2 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 1.2;
+  color: #222;
+}
+
+.page-results > p {
+  margin: 0 0 18px;
+  color: #555;
+}
+
+.page-results .property-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.page-results-empty {
+  padding: 14px;
+  border: 1px solid #e0e6ed;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
 /* Trigger Button */
 .widget-trigger {
   position: fixed;
@@ -307,7 +345,6 @@ body {
   cursor: not-allowed;
 }
 
-/* Property cards inside chat */
 .property-card {
   background: #fff;
   border: 1px solid #e0e6ed;
@@ -319,6 +356,10 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+.page-results .property-card {
+  margin-bottom: 0;
+}
+
 .property-image {
   width: 70px;
   height: 60px;
@@ -326,6 +367,11 @@ body {
   object-fit: cover;
   margin-right: 8px;
   flex-shrink: 0;
+}
+
+.page-results .property-image {
+  width: 112px;
+  height: 92px;
 }
 
 .property-details {
@@ -387,6 +433,24 @@ body {
 
   .page-content {
     padding: 18px;
+  }
+
+  .page-results {
+    margin: 14px auto 80px;
+    padding: 16px;
+  }
+
+  .page-results h2 {
+    font-size: 22px;
+  }
+
+  .page-results .property-list {
+    grid-template-columns: 1fr;
+  }
+
+  .page-results .property-image {
+    width: 96px;
+    height: 84px;
   }
 
   .page-content h1 {
@@ -462,6 +526,17 @@ body {
 
   .chat-input-area.money-input::before {
     left: 25px;
+  }
+
+  body.location-autocomplete-active .pac-container {
+    position: fixed !important;
+    top: auto !important;
+    right: 12px !important;
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
+    width: auto !important;
+    max-height: min(240px, 42dvh);
+    overflow-y: auto;
   }
 
   .widget-trigger {

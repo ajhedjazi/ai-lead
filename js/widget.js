@@ -9,6 +9,7 @@
   const chatInputArea = document.querySelector('.chat-input-area');
   const chatInput = document.getElementById('chat-input');
   const sendButton = document.getElementById('send-button');
+  const propertyResults = document.getElementById('property-results');
 
   // State Variables
   let currentQuestionIndex = 0;
@@ -362,6 +363,8 @@
       googlePlacesAutocomplete = null;
     }
 
+    document.body.classList.remove('location-autocomplete-active');
+
     currentQuestionIndex++;
     askQuestion();
   }
@@ -372,6 +375,8 @@
   };
 
   function enableAutocomplete() {
+    document.body.classList.add('location-autocomplete-active');
+
     if (!googlePlacesAutocomplete && window.google?.maps?.places) {
       const hullBounds = new google.maps.LatLngBounds(
         { lat: 53.70, lng: -0.50 },
@@ -507,55 +512,97 @@
       }))
       .sort((a, b) => b.matchScore - a.matchScore);
 
-    const topMatches = ranked.slice(0, 3);
-
-    let resultsHtml = `
-      <div class="results-message">
-        <h4>Here are your best matches, ${firstName}!</h4>
-        <p>Based on your preferences for a ${enquiry.type === 'buyer' ? 'home to buy' : 'property to invest in'} within your budget of £${enquiry.budget?.toLocaleString()} in ${enquiry.location || 'your preferred area'}, here are some options:</p>
-      </div>
-      <div class="property-list">
-    `;
-
-    if (topMatches.length > 0) {
-      topMatches.forEach((p) => {
-        let label = 'Possible Match';
-        let labelClass = 'possible-match';
-
-        if (p.matchScore >= 80) {
-          label = 'BEST MATCH';
-          labelClass = 'best-match';
-        } else if (p.matchScore >= 60) {
-          label = 'Good Match';
-          labelClass = 'good-match';
-        }
-
-        resultsHtml += `
-          <div class="property-card">
-            <img src="${p.image}" alt="${p.title}" class="property-image" onerror="this.onerror=null;this.src='${propertyImageFallback}';">
-            <div class="property-details">
-              <h5>${p.title}</h5>
-              <p>${p.location}</p>
-              <p>£${p.price.toLocaleString()}</p>
-              <span class="match-label ${labelClass}">${label} - ${p.matchScore}%</span>
-            </div>
-          </div>
-        `;
-      });
-
-      resultsHtml += `</div>
-        <button class="chat-option-button" style="align-self: center; margin-top: 15px;" onclick="location.reload()">View All Matches</button>
-      `;
-    } else {
-      resultsHtml += `<div class="message assistant" style="align-self: flex-start;">Apologies, but we couldn't find any properties matching your exact criteria right now. Please try adjusting your preferences or contact us directly.</div>`;
+    if (renderPageResults(ranked, firstName)) {
+      closeWidget();
+      scrollToPageResults();
     }
 
-    addMessage(resultsHtml, 'assistant', [], true);
-    chatInput.disabled = true;
-    sendButton.disabled = true;
-    chatInput.placeholder = "Conversation ended.";
-
     console.log("Final Enquiry:", enquiry);
+  }
+
+  function renderPageResults(rankedProperties, firstName) {
+    if (!propertyResults) return false;
+
+    propertyResults.innerHTML = '';
+    propertyResults.classList.remove('hidden');
+
+    const heading = document.createElement('h2');
+    heading.textContent = `Here are your best matches, ${firstName}!`;
+
+    const summary = document.createElement('p');
+    summary.textContent = `Based on your preferences for a ${enquiry.type === 'buyer' ? 'home to buy' : 'property to invest in'} within your budget of £${enquiry.budget?.toLocaleString()} in ${enquiry.location || 'your preferred area'}, here are the properties that fit best.`;
+
+    propertyResults.append(heading, summary);
+
+    if (rankedProperties.length === 0) {
+      const emptyState = document.createElement('p');
+      emptyState.classList.add('page-results-empty');
+      emptyState.textContent = "Apologies, but we couldn't find any properties matching your exact criteria right now. Please try adjusting your preferences or contact us directly.";
+      propertyResults.appendChild(emptyState);
+      return true;
+    }
+
+    const propertyList = document.createElement('div');
+    propertyList.classList.add('property-list');
+
+    rankedProperties.forEach((property) => {
+      propertyList.appendChild(createPropertyCard(property));
+    });
+
+    propertyResults.appendChild(propertyList);
+    return true;
+  }
+
+  function scrollToPageResults() {
+    history.replaceState(null, '', '#property-results');
+    propertyResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function createPropertyCard(property) {
+    const propertyCard = document.createElement('article');
+    propertyCard.classList.add('property-card');
+
+    const image = document.createElement('img');
+    image.classList.add('property-image');
+    image.src = property.image;
+    image.alt = property.title;
+    image.addEventListener('error', () => {
+      image.src = propertyImageFallback;
+    }, { once: true });
+
+    const details = document.createElement('div');
+    details.classList.add('property-details');
+
+    const title = document.createElement('h5');
+    title.textContent = property.title;
+
+    const location = document.createElement('p');
+    location.textContent = property.location;
+
+    const price = document.createElement('p');
+    price.textContent = `£${property.price.toLocaleString()}`;
+
+    const matchLabel = document.createElement('span');
+    const label = getMatchLabel(property.matchScore);
+    matchLabel.classList.add('match-label', label.className);
+    matchLabel.textContent = `${label.text} - ${property.matchScore}%`;
+
+    details.append(title, location, price, matchLabel);
+    propertyCard.append(image, details);
+
+    return propertyCard;
+  }
+
+  function getMatchLabel(matchScore) {
+    if (matchScore >= 80) {
+      return { text: 'BEST MATCH', className: 'best-match' };
+    }
+
+    if (matchScore >= 60) {
+      return { text: 'Good Match', className: 'good-match' };
+    }
+
+    return { text: 'Possible Match', className: 'possible-match' };
   }
 
   // === Reset Function ===
@@ -568,6 +615,7 @@
     sendButton.disabled = true;
     chatInput.placeholder = questions[0]?.placeholder || "Type your answer...";
     chatInputArea.classList.remove('money-input');
+    document.body.classList.remove('location-autocomplete-active');
 
     if (googlePlacesAutocomplete) {
       google.maps.event.clearInstanceListeners(chatInput);
