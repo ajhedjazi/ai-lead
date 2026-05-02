@@ -161,13 +161,17 @@
     widgetContainer.classList.toggle('hidden');
 
     if (!widgetContainer.classList.contains('hidden')) {
+      widgetTrigger.classList.add('hidden');
       resetChat();
       askQuestion();
+    } else {
+      widgetTrigger.classList.remove('hidden');
     }
   }
 
   function closeWidget() {
     widgetContainer.classList.add('hidden');
+    widgetTrigger.classList.remove('hidden');
     resetChat();
   }
 
