@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { getSession, updateSession, clearSession } = require('./src/sessionStore');
 const { getOpeningMessage, handleAnswer } = require('./src/flow');
 const { sendMessengerMessage } = require('./src/sendMessengerMessage');
+const { sendLeadEmail } = require('./src/sendLeadEmail');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -84,13 +85,19 @@ async function handleMessengerEvent(event) {
 
   const result = handleAnswer(session, text);
   updateSession(senderId, result.session);
+  let completedEnquiry = null;
 
   if (result.completed) {
     console.log('Completed Hull Maths Tutor enquiry:', result.enquiry);
+    completedEnquiry = result.enquiry;
     clearSession(senderId);
   }
 
-  await sendMessengerMessage(senderId, { text: result.reply });
+  await sendMessengerMessage(senderId, result.reply);
+
+  if (completedEnquiry) {
+    await sendLeadEmail(completedEnquiry);
+  }
 }
 
 async function startSession(senderId) {
@@ -101,7 +108,7 @@ async function startSession(senderId) {
   };
 
   updateSession(senderId, session);
-  await sendMessengerMessage(senderId, { text: getOpeningMessage(session) });
+  await sendMessengerMessage(senderId, getOpeningMessage(session));
 }
 
 function isValidSignature(req) {
