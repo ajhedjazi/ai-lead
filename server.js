@@ -11,6 +11,14 @@ const app = express();
 const port = process.env.PORT || 3000;
 const verifyToken = process.env.META_VERIFY_TOKEN;
 const appSecret = process.env.META_APP_SECRET;
+const graphApiVersion = process.env.META_GRAPH_API_VERSION || 'v20.0';
+const pageAccessToken = process.env.META_PAGE_ACCESS_TOKEN;
+const getStartedPayload = 'HULL_MATHS_TUTOR_GET_STARTED';
+const getStartedPayloads = new Set([
+  'GET_STARTED',
+  getStartedPayload,
+]);
+const messengerGreeting = '👋 Thanks for contacting Hull Maths Tutor. Tap Get Started below to begin your quick enquiry.';
 
 app.use(express.json({
   verify: (req, res, buffer) => {
@@ -62,7 +70,7 @@ async function handleMessengerEvent(event) {
     return;
   }
 
-  if (event.postback) {
+  if (isGetStartedPostback(event)) {
     await startSession(senderId);
     return;
   }
@@ -79,7 +87,9 @@ async function handleMessengerEvent(event) {
   const session = getSession(senderId);
 
   if (!session.started) {
-    await startSession(senderId);
+    await sendMessengerMessage(senderId, {
+      text: 'Please tap Get Started to begin your Hull Maths Tutor enquiry.',
+    });
     return;
   }
 
@@ -98,6 +108,13 @@ async function handleMessengerEvent(event) {
   if (completedEnquiry) {
     await sendLeadEmail(completedEnquiry);
   }
+}
+
+function isGetStartedPostback(event) {
+  return Boolean(
+    event.postback?.payload
+    && getStartedPayloads.has(event.postback.payload)
+  );
 }
 
 async function startSession(senderId) {
@@ -134,6 +151,47 @@ function isValidSignature(req) {
     && crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
 }
 
+async function registerMessengerProfile() {
+  if (!pageAccessToken) {
+    console.warn('Messenger Profile setup skipped: META_PAGE_ACCESS_TOKEN is not set.');
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${graphApiVersion}/me/messenger_profile?access_token=${pageAccessToken}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          get_started: {
+            payload: getStartedPayload,
+          },
+          greeting: [
+            {
+              locale: 'default',
+              text: messengerGreeting,
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn(`Messenger Profile setup failed: ${response.status} ${errorText}`);
+      return;
+    }
+
+    console.log('Messenger Profile setup complete.');
+  } catch (error) {
+    console.warn('Messenger Profile setup failed:', error.message);
+  }
+}
+
 app.listen(port, () => {
   console.log(`Hull Maths Tutor Messenger bot listening on port ${port}`);
+  registerMessengerProfile();
 });

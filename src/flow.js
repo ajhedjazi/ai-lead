@@ -115,24 +115,28 @@ function getCurrentQuestion(session) {
 }
 
 function getQuestionMessage(question) {
-  const message = {
-    text: question.text,
-  };
-
-  if (question.quickReplies) {
-    message.quick_replies = question.quickReplies.map((quickReply) => {
-      const title = typeof quickReply === 'string' ? quickReply : quickReply.title;
-      const payload = typeof quickReply === 'string' ? quickReply : quickReply.payload;
-
-      return {
-        content_type: 'text',
-        title,
-        payload,
-      };
-    });
+  if (!question.quickReplies) {
+    return {
+      text: question.text,
+    };
   }
 
-  return message;
+  return [
+    { text: question.text },
+    {
+      text: 'Please choose one below 👇',
+      quick_replies: question.quickReplies.map((quickReply) => {
+        const title = typeof quickReply === 'string' ? quickReply : quickReply.title;
+        const payload = typeof quickReply === 'string' ? quickReply : quickReply.payload;
+
+        return {
+          content_type: 'text',
+          title,
+          payload,
+        };
+      }),
+    },
+  ];
 }
 
 module.exports = {

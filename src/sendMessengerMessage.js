@@ -3,6 +3,13 @@ const pageAccessToken = process.env.META_PAGE_ACCESS_TOKEN;
 const typingDelayMs = 1200;
 
 async function sendMessengerMessage(recipientId, message) {
+  if (Array.isArray(message)) {
+    for (const singleMessage of message) {
+      await sendMessengerMessage(recipientId, singleMessage);
+    }
+    return;
+  }
+
   if (!pageAccessToken) {
     console.log('Messenger reply skipped because META_PAGE_ACCESS_TOKEN is not set:', {
       recipientId,
