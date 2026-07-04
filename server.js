@@ -190,8 +190,36 @@ async function registerMessengerProfile() {
     }
 
     console.log('Messenger Profile setup complete.');
+    await verifyMessengerProfile();
   } catch (error) {
     console.warn('Messenger Profile setup failed:', error.message);
+  }
+}
+
+async function verifyMessengerProfile() {
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${graphApiVersion}/me/messenger_profile?fields=get_started,greeting,persistent_menu&access_token=${pageAccessToken}`
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn(`Messenger Profile verification failed: ${response.status} ${errorText}`);
+      return;
+    }
+
+    const profile = await response.json();
+    console.log('Messenger Profile verification:', profile);
+
+    if (!profile.data?.[0]?.get_started) {
+      console.warn('Messenger Profile warning: get_started is missing.');
+    }
+
+    if (!profile.data?.[0]?.greeting) {
+      console.warn('Messenger Profile warning: greeting is missing.');
+    }
+  } catch (error) {
+    console.warn('Messenger Profile verification failed:', error.message);
   }
 }
 
