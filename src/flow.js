@@ -24,7 +24,7 @@ const questions = [
   },
   {
     key: 'email',
-    text: "Brilliant.\n\nWhat's the best email address for me to send your personalised Maths MOT recommendation to?",
+    text: "Brilliant.\n\nWhat's the best email address to contact you on?",
     validate: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
     error: 'Please send a valid email address.',
   },
@@ -97,9 +97,27 @@ function handleAnswer(session, rawAnswer) {
       session: nextSession,
       completed: true,
       enquiry: nextSession.enquiry,
-      reply: {
-        text: "🎉 Thanks, that's everything I need.\n\nI'll personally review your answers and be in touch as soon as possible to discuss the next steps and answer any questions you may have.\n\nThanks again for getting in touch with Hull Maths Tutor — I look forward to speaking with you soon.\n\n— Amir",
-      },
+      reply: [
+        {
+          text: "🎉 Thanks, that's everything I need.\n\nI'll personally review your answers and be in touch as soon as possible to discuss the next steps and answer any questions you may have.\n\nThanks again for getting in touch with Hull Maths Tutor — I look forward to speaking with you soon.\n\n— Amir",
+        },
+        {
+          attachment: {
+            type: 'template',
+            payload: {
+              template_type: 'button',
+              text: "Got something more specific you'd like to ask?",
+              buttons: [
+                {
+                  type: 'phone_number',
+                  title: 'Call Amir',
+                  payload: '+447828579277',
+                },
+              ],
+            },
+          },
+        },
+      ],
     };
   }
 
