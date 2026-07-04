@@ -30,6 +30,10 @@ app.get('/', (req, res) => {
   res.send('Hull Maths Tutor Messenger bot is running.');
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
