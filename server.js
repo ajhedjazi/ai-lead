@@ -179,6 +179,19 @@ async function registerMessengerProfile() {
               text: messengerGreeting,
             },
           ],
+          persistent_menu: [
+            {
+              locale: 'default',
+              composer_input_disabled: false,
+              call_to_actions: [
+                {
+                  type: 'postback',
+                  title: 'Start Enquiry',
+                  payload: getStartedPayload,
+                },
+              ],
+            },
+          ],
         }),
       }
     );
@@ -211,16 +224,21 @@ async function verifyMessengerProfile() {
     const profile = await response.json();
     console.log('Messenger Profile verification:', profile);
 
-    if (!profile.data?.[0]?.get_started) {
+    if (!hasMessengerProfileField(profile, 'get_started')) {
       console.warn('Messenger Profile warning: get_started is missing.');
     }
 
-    if (!profile.data?.[0]?.greeting) {
+    if (!hasMessengerProfileField(profile, 'greeting')) {
       console.warn('Messenger Profile warning: greeting is missing.');
     }
   } catch (error) {
     console.warn('Messenger Profile verification failed:', error.message);
   }
+}
+
+function hasMessengerProfileField(profile, fieldName) {
+  return Array.isArray(profile.data)
+    && profile.data.some((entry) => Boolean(entry?.[fieldName]));
 }
 
 app.listen(port, () => {
