@@ -173,12 +173,6 @@ async function registerMessengerProfile() {
           get_started: {
             payload: getStartedPayload,
           },
-          greeting: [
-            {
-              locale: 'default',
-              text: messengerGreeting,
-            },
-          ],
           persistent_menu: [
             {
               locale: 'default',
@@ -203,9 +197,42 @@ async function registerMessengerProfile() {
     }
 
     console.log('Messenger Profile setup complete.');
+    await registerMessengerGreeting();
     await verifyMessengerProfile();
   } catch (error) {
     console.warn('Messenger Profile setup failed:', error.message);
+  }
+}
+
+async function registerMessengerGreeting() {
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${graphApiVersion}/me/messenger_profile?access_token=${pageAccessToken}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          greeting: [
+            {
+              locale: 'default',
+              text: messengerGreeting,
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn(`Messenger greeting setup failed: ${response.status} ${errorText}`);
+      return;
+    }
+
+    console.log('Messenger greeting setup complete.');
+  } catch (error) {
+    console.warn('Messenger greeting setup failed:', error.message);
   }
 }
 
