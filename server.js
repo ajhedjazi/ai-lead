@@ -192,6 +192,17 @@ async function registerMessengerProfile() {
               ],
             },
           ],
+          ice_breakers: [
+            {
+              locale: 'default',
+              call_to_actions: [
+                {
+                  question: 'Start Enquiry',
+                  payload: getStartedPayload,
+                },
+              ],
+            },
+          ],
         }),
       }
     );
@@ -212,7 +223,7 @@ async function registerMessengerProfile() {
 async function verifyMessengerProfile() {
   try {
     const response = await fetch(
-      `https://graph.facebook.com/${graphApiVersion}/me/messenger_profile?fields=get_started,greeting,persistent_menu&access_token=${pageAccessToken}`
+      `https://graph.facebook.com/${graphApiVersion}/me/messenger_profile?fields=get_started,persistent_menu,ice_breakers&access_token=${pageAccessToken}`
     );
 
     if (!response.ok) {
@@ -228,8 +239,12 @@ async function verifyMessengerProfile() {
       console.warn('Messenger Profile warning: get_started is missing.');
     }
 
-    if (!hasMessengerProfileField(profile, 'greeting')) {
-      console.warn('Messenger Profile warning: greeting is missing.');
+    if (!hasMessengerProfileField(profile, 'persistent_menu')) {
+      console.warn('Messenger Profile warning: persistent_menu is missing.');
+    }
+
+    if (!hasMessengerProfileField(profile, 'ice_breakers')) {
+      console.warn('Messenger Profile warning: ice_breakers is missing.');
     }
   } catch (error) {
     console.warn('Messenger Profile verification failed:', error.message);
